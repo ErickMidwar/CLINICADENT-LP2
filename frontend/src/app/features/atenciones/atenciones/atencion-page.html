@@ -1,0 +1,229 @@
+<div class="page-heading-row">
+  <div>
+    <p class="eyebrow">Módulo 3 · Atenciones clínicas</p>
+    <h1 class="page-title">Registro de atención</h1>
+    <p class="page-subtitle">Ficha clínica y odontograma de cada cita atendida.</p>
+  </div>
+  <div class="stat-chips">
+    <div class="stat-chip"><span>Citas por atender</span><strong>{{ citas().length }}</strong></div>
+    <div class="stat-chip"><span>Atenciones</span><strong>{{ totalAtenciones() }}</strong></div>
+  </div>
+</div>
+
+@if (error()) {
+  <p class="error-message" role="alert">
+    <span>{{ error() }}</span>
+    <button class="alert-close" type="button" aria-label="Cerrar mensaje" (click)="error.set(null)">&times;</button>
+  </p>
+}
+@if (success()) {
+  <p class="success-message" role="status">
+    <span>{{ success() }}</span>
+    <button class="alert-close" type="button" aria-label="Cerrar mensaje" (click)="success.set(null)">&times;</button>
+  </p>
+}
+
+<section class="transaction-card attention-workflow" aria-labelledby="attention-title">
+  <header class="transaction-head">
+    <span class="transaction-mark">03</span>
+    <div><p class="eyebrow">Nueva operación clínica</p><h2 id="attention-title">Atender cita</h2></div>
+  </header>
+  <form class="transaction-layout" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="transaction-main">
+      <section class="transaction-section">
+        <div class="transaction-section-title"><span>1</span><div><h3>Cabecera clínica</h3><p>Cita, profesional y diagnóstico</p></div></div>
+        <div class="clinic-form-grid">
+          <div class="field">
+            <label for="atencion-cita">Cita programada *</label>
+            <select id="atencion-cita" formControlName="idCita">
+              <option value="" disabled>Selecciona una cita</option>
+              @for (cita of citas(); track cita.id) {
+                <option [value]="cita.id">#{{ cita.id }} · {{ cita.fechaHora | date:'dd/MM/yyyy HH:mm' }} · {{ pacienteDeCita(cita.id) }}</option>
+              }
+            </select>
+            @if (citas().length === 0) { <p class="field-hint">No hay citas programadas pendientes de atención.</p> }
+            @if (invalido('idCita')) { <p class="validation-message">Selecciona la cita que vas a atender.</p> }
+          </div>
+          <div class="field">
+            <label for="atencion-odontologo">Odontólogo *</label>
+            <select id="atencion-odontologo" formControlName="idOdontologo">
+              <option value="" disabled>Selecciona un odontólogo</option>
+              @for (odontologo of odontologos(); track odontologo.id) {
+                <option [value]="odontologo.id">{{ odontologo.apellidos }}, {{ odontologo.nombres }} · COP {{ odontologo.cop }}</option>
+              }
+            </select>
+            @if (invalido('idOdontologo')) { <p class="validation-message">Selecciona el profesional que atiende.</p> }
+          </div>
+          <div class="field">
+            <label for="diagnostico">Diagnóstico *</label>
+            <textarea id="diagnostico" formControlName="diagnostico" maxlength="500" placeholder="Ej. Caries oclusal en primer molar superior derecho"></textarea>
+            <p class="field-hint char-count">{{ form.controls.diagnostico.value.length }}/500</p>
+            @if (invalido('diagnostico')) { <p class="validation-message">El diagnóstico es obligatorio.</p> }
+          </div>
+          <div class="field">
+            <label for="atencion-estado">Estado *</label>
+            <select id="atencion-estado" formControlName="estado">
+              <option value="ATENDIDA">ATENDIDA</option>
+              <option value="PENDIENTE">PENDIENTE</option>
+              <option value="CANCELADA">CANCELADA</option>
+            </select>
+            @if (invalido('estado')) { <p class="validation-message">Selecciona el estado de la atención.</p> }
+          </div>
+          <div class="field">
+            <label for="nota-medica">Nota médica</label>
+            <textarea id="nota-medica" formControlName="notaMedica" maxlength="500" placeholder="Indicaciones, alergias, próximos controles..."></textarea>
+            <p class="field-hint char-count">{{ form.controls.notaMedica.value.length }}/500</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="transaction-section">
+        <div class="transaction-section-title"><span>2</span><div><h3>Odontograma</h3><p>Haz clic en una pieza dental (nomenclatura FDI) · {{ detalles().length }} procedimientos</p></div></div>
+
+        <div class="odontogram">
+          <div class="odontogram-top">
+            <div class="segmented" role="group" aria-label="Tipo de dentición">
+              <button type="button" [class.active]="denticion() === 'permanente'" (click)="cambiarDenticion('permanente')">Permanente</button>
+              <button type="button" [class.active]="denticion() === 'temporal'" (click)="cambiarDenticion('temporal')">Temporal</button>
+            </div>
+            <div class="odontogram-legend">
+              <span><i class="legend-dot selected"></i>Seleccionada</span>
+              <span><i class="legend-dot treated"></i>Con procedimiento</span>
+            </div>
+          </div>
+
+          @for (arcada of [arcadas().superior, arcadas().inferior]; track $index; let inferior = $last) {
+            <div class="arch" [class.lower]="inferior">
+              @for (cuadrante of arcada; track $index) {
+                <div class="quadrant">
+                  @for (pieza of cuadrante; track pieza) {
+                    <button type="button" class="tooth"
+                      [class.selected]="piezaSeleccionada() === '' + pieza"
+                      [class.treated]="procedimientosPorPieza().has('' + pieza)"
+                      [attr.aria-pressed]="piezaSeleccionada() === '' + pieza"
+                      [attr.aria-label]="'Pieza ' + pieza"
+                      (click)="seleccionarPieza(pieza)">
+                      <svg viewBox="0 0 24 28" aria-hidden="true"><path d="M6 2C3 2 1.5 4.6 1.5 8c0 3.6 1.8 6.4 2.4 10.6.5 3.7 1.7 7.4 3.4 7.4 1.6 0 2.1-3 2.6-6 .4-2.3 1-3.5 2.1-3.5s1.7 1.2 2.1 3.5c.5 3 1 6 2.6 6 1.7 0 2.9-3.7 3.4-7.4.6-4.2 2.4-7 2.4-10.6C22.5 4.6 21 2 18 2c-2.6 0-4 1.4-6 1.4S8.6 2 6 2Z"/></svg>
+                      <span class="tooth-number">{{ pieza }}</span>
+                      @if (procedimientosPorPieza().get('' + pieza); as total) { <span class="tooth-badge">{{ total }}</span> }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="detail-entry-grid attention-entry-grid">
+          <div class="field">
+            <label for="atencion-procedimiento">Procedimiento *</label>
+            <select id="atencion-procedimiento" formControlName="idProcedimiento">
+              <option value="" disabled>Selecciona procedimiento</option>
+              @for (procedimiento of procedimientos(); track procedimiento.id) {
+                <option [value]="procedimiento.id">{{ procedimiento.nombre }} · S/ {{ procedimiento.precio | number:'1.2-2' }}</option>
+              }
+            </select>
+            @if (invalido('idProcedimiento')) { <p class="validation-message">Elige un procedimiento.</p> }
+          </div>
+          <div class="field">
+            <label for="pieza">Pieza (FDI) *</label>
+            <input id="pieza" formControlName="piezaDental" maxlength="2" inputmode="numeric" placeholder="Ej. 16" />
+            @if (invalido('piezaDental')) { <p class="validation-message">Usa 11-48 o 51-85.</p> }
+          </div>
+          <div class="field">
+            <label for="observacion-atencion">Observación</label>
+            <input id="observacion-atencion" formControlName="observacion" maxlength="255" placeholder="Opcional" />
+          </div>
+          <button class="button-secondary" type="button" (click)="agregarDetalle()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Añadir
+          </button>
+        </div>
+
+        @if (detalles().length > 0) {
+          <div class="table-wrap transaction-table">
+            <table class="data-table">
+              <thead><tr><th>Pieza</th><th>Procedimiento</th><th>Observación</th><th>Precio ref.</th><th class="actions-cell">Acción</th></tr></thead>
+              <tbody>
+                @for (detalle of detalles(); track detalle.piezaDental + '-' + detalle.idProcedimiento; let index = $index) {
+                  <tr>
+                    <td><span class="tooth-chip">{{ detalle.piezaDental }}</span></td>
+                    <td class="name-cell">{{ detalle.nombreProcedimiento }}</td>
+                    <td>{{ detalle.observacion || '—' }}</td>
+                    <td>S/ {{ detalle.precio | number:'1.2-2' }}</td>
+                    <td class="actions-cell">
+                      <button class="icon-button danger" type="button" title="Quitar" [attr.aria-label]="'Quitar ' + detalle.nombreProcedimiento" (click)="quitarDetalle(index)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="transaction-empty">Selecciona una pieza en el odontograma, elige el procedimiento y pulsa «Añadir».</p>
+        }
+      </section>
+    </div>
+
+    <aside class="transaction-summary">
+      <p class="summary-kicker">Cierre de atención</p>
+      <div class="summary-value"><span>Paciente</span><strong>{{ pacienteSeleccionado() ? pacienteSeleccionado()!.apellidos + ', ' + pacienteSeleccionado()!.nombres : '—' }}</strong></div>
+      <div class="summary-value"><span>Odontólogo</span><strong>{{ odontologoSeleccionado() ? odontologoSeleccionado()!.apellidos + ', ' + odontologoSeleccionado()!.nombres : '—' }}</strong></div>
+      <div class="summary-value"><span>Procedimientos · piezas</span><strong>{{ detalles().length }} · {{ procedimientosPorPieza().size }}</strong></div>
+      <div class="summary-total"><span>Costo referencial</span><strong>S/ {{ costoEstimado() | number:'1.2-2' }}</strong></div>
+      <div class="summary-value"><span>Estado de la atención</span><strong class="status-next">{{ form.controls.estado.value }}</strong></div>
+      <button class="button" type="submit" [disabled]="saving() || detalles().length === 0 || citas().length === 0 || odontologos().length === 0">
+        @if (saving()) { <span class="spinner" aria-hidden="true"></span> Registrando... } @else { Registrar atención }
+      </button>
+    </aside>
+  </form>
+</section>
+
+<section class="transaction-history">
+  <div class="plans-heading">
+    <div><p class="eyebrow">Historial clínico</p><h2 class="section-heading">Atenciones registradas</h2></div>
+    <span class="plan-count">{{ totalAtenciones() }} atenciones</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Atención</th><th>Paciente</th><th>Odontólogo</th><th>Fecha</th><th>Diagnóstico</th><th>Estado</th><th>Piezas tratadas</th></tr></thead>
+      <tbody>
+        @if (loading() && items().length === 0) {
+          @for (fila of [1, 2, 3]; track fila) {
+            <tr>@for (celda of [1, 2, 3, 4, 5, 6, 7]; track celda) { <td><span class="skeleton"></span></td> }</tr>
+          }
+        }
+        @for (item of items(); track item.id) {
+          <tr>
+            <td class="name-cell">#{{ item.id }}<small class="cell-sub">Cita #{{ item.idCita }}</small></td>
+            <td>{{ pacienteDeCita(item.idCita) }}</td>
+            <td>{{ nombreOdontologo(item) }}</td>
+            <td>{{ item.faAtencion | date:'dd/MM/yyyy' }}<small class="cell-sub">{{ item.faAtencion | date:'HH:mm' }}</small></td>
+            <td class="description-cell">{{ item.diagnostico }}</td>
+            <td><span class="status-badge" [attr.data-status]="item.estado">{{ item.estado }}</span></td>
+            <td>
+              <div class="tooth-chips">
+                @for (detalle of item.detalles; track detalle.id) {
+                  <span class="tooth-chip" [title]="detalle.intervencion + (detalle.observacion ? ' · ' + detalle.observacion : '')">{{ detalle.piezaDental }}</span>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          @if (!loading()) { <tr><td colspan="7" class="empty-cell">Aún no hay atenciones registradas.</td></tr> }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (totalPaginas() > 1) {
+    <nav class="pager" aria-label="Paginación de atenciones">
+      <span>Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+      <div class="pager-actions">
+        <button class="button-secondary" type="button" [disabled]="pagina() === 0 || loading()" (click)="cargar(pagina() - 1)">Anterior</button>
+        <button class="button-secondary" type="button" [disabled]="pagina() + 1 >= totalPaginas() || loading()" (click)="cargar(pagina() + 1)">Siguiente</button>
+      </div>
+    </nav>
+  }
+</section>

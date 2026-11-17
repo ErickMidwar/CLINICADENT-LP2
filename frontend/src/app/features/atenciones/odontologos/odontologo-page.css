@@ -1,0 +1,106 @@
+.dentist-form-card {
+  overflow: hidden;
+  margin-bottom: 30px;
+  background: var(--surface);
+  border: 1px solid #e2e8f0;
+  border-top: 4px solid #14b8a6;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+  scroll-margin-top: 20px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dentist-form-card.is-editing {
+  border-top-color: #f59e0b;
+  box-shadow: 0 14px 30px -8px rgba(245, 158, 11, 0.25);
+}
+
+.dentist-form-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 26px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dentist-form-head .eyebrow {
+  margin: 0 0 3px;
+  font-size: 10px;
+}
+
+.dentist-form-head h2 {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.dentist-form-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #0f766e;
+  background: linear-gradient(135deg, #ccfbf1 0%, #e6fffa 100%);
+  border: 1px solid #99f6e4;
+  border-radius: 11px;
+  transition: all 0.3s ease;
+}
+
+.is-editing .dentist-form-icon {
+  color: #b45309;
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border-color: #fde68a;
+}
+
+.dentist-form-body {
+  display: grid;
+  gap: 22px;
+  padding: 24px 26px 26px;
+}
+
+.dentist-list .toolbar {
+  align-items: flex-end;
+}
+
+.dentist-list .toolbar .eyebrow {
+  margin-bottom: 4px;
+}
+
+.dentist-list .section-heading {
+  margin: 0;
+}
+
+.data-table tr.row-editing td {
+  background: #fffbeb;
+}
+
+.actions-cell {
+  min-width: 110px;
+}
+
+.actions-cell .icon-button + .icon-button {
+  margin-left: 4px;
+}
+
+.confirm-danger {
+  min-height: 42px;
+  padding: 0 16px;
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+@media (max-width: 600px) {
+  .dentist-form-head,
+  .dentist-form-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .search-field {
+    max-width: none;
+  }
+}

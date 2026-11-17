@@ -1,0 +1,157 @@
+<div class="page-heading-row">
+  <div>
+    <p class="eyebrow">Módulo 3 · Atenciones clínicas</p>
+    <h1 class="page-title">Odontólogos</h1>
+    <p class="page-subtitle">Administra el personal clínico y su registro profesional (COP).</p>
+  </div>
+  <div class="stat-chips">
+    <div class="stat-chip"><span>Profesionales</span><strong>{{ items().length }}</strong></div>
+    <div class="stat-chip"><span>Especialidades</span><strong>{{ totalEspecialidades() }}</strong></div>
+  </div>
+</div>
+
+@if (error()) {
+  <p class="error-message" role="alert">
+    <span>{{ error() }}</span>
+    <button class="alert-close" type="button" aria-label="Cerrar mensaje" (click)="error.set(null)">&times;</button>
+  </p>
+}
+@if (success()) {
+  <p class="success-message" role="status">
+    <span>{{ success() }}</span>
+    <button class="alert-close" type="button" aria-label="Cerrar mensaje" (click)="success.set(null)">&times;</button>
+  </p>
+}
+
+<section id="odontologo-form" class="dentist-form-card" [class.is-editing]="editingId()">
+  <header class="dentist-form-head">
+    <span class="dentist-form-icon" aria-hidden="true">
+      @if (editingId()) {
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      } @else {
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      }
+    </span>
+    <div>
+      <p class="eyebrow">{{ editingId() ? 'Edición de registro' : 'Nuevo registro' }}</p>
+      <h2>{{ editingId() ? 'Editar odontólogo' : 'Registrar odontólogo' }}</h2>
+    </div>
+  </header>
+
+  <form class="dentist-form-body" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="clinic-form-grid">
+      <div class="field">
+        <label for="cop">COP (Colegio Odontológico) *</label>
+        <input id="cop" formControlName="cop" maxlength="20" placeholder="Ej. 12345" autocomplete="off" />
+        @if (invalido('cop')) { <p class="validation-message">El COP es obligatorio.</p> }
+      </div>
+      <div class="field">
+        <label for="odo-especialidad">Especialidad *</label>
+        <select id="odo-especialidad" formControlName="especialidad">
+          <option value="" disabled>Selecciona una especialidad</option>
+          @for (esp of especialidades(); track esp.id) {
+            <option [value]="esp.nombre">{{ esp.nombre }}</option>
+          }
+          @if (form.controls.especialidad.value && !tieneEspecialidad(form.controls.especialidad.value)) {
+            <option [value]="form.controls.especialidad.value">{{ form.controls.especialidad.value }} (fuera de catálogo)</option>
+          }
+        </select>
+        @if (invalido('especialidad')) { <p class="validation-message">Selecciona una especialidad del catálogo.</p> }
+      </div>
+      <div class="field">
+        <label for="odo-nombres">Nombres *</label>
+        <input id="odo-nombres" formControlName="nombres" maxlength="80" placeholder="Ej. Ana María" autocomplete="off" />
+        @if (invalido('nombres')) { <p class="validation-message">Los nombres son obligatorios.</p> }
+      </div>
+      <div class="field">
+        <label for="odo-apellidos">Apellidos *</label>
+        <input id="odo-apellidos" formControlName="apellidos" maxlength="80" placeholder="Ej. Torres Quispe" autocomplete="off" />
+        @if (invalido('apellidos')) { <p class="validation-message">Los apellidos son obligatorios.</p> }
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="button" type="submit" [disabled]="saving()">
+        @if (saving()) {
+          <span class="spinner" aria-hidden="true"></span> Guardando...
+        } @else {
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          {{ editingId() ? 'Guardar cambios' : 'Registrar odontólogo' }}
+        }
+      </button>
+      @if (editingId()) {
+        <button class="button-secondary" type="button" (click)="cancelarEdicion()" [disabled]="saving()">Cancelar edición</button>
+      }
+    </div>
+  </form>
+</section>
+
+<section class="dentist-list">
+  <div class="toolbar">
+    <div>
+      <p class="eyebrow">Padrón clínico</p>
+      <h2 class="section-heading">Odontólogos registrados</h2>
+    </div>
+    <label class="search-field">
+      <span class="sr-only">Buscar odontólogo</span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" placeholder="Buscar por nombre, COP o especialidad" [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </label>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Odontólogo</th><th>COP</th><th>Especialidad</th><th class="actions-cell">Acciones</th></tr></thead>
+      <tbody>
+        @if (loading() && items().length === 0) {
+          @for (fila of [1, 2, 3]; track fila) {
+            <tr><td><span class="skeleton" style="width: 60%"></span></td><td><span class="skeleton" style="width: 50%"></span></td><td><span class="skeleton" style="width: 70%"></span></td><td><span class="skeleton" style="width: 40%; margin-left: auto"></span></td></tr>
+          }
+        }
+        @for (item of filtrados(); track item.id) {
+          <tr [class.row-editing]="editingId() === item.id">
+            <td>
+              <div class="person-cell">
+                <span class="avatar-initials" aria-hidden="true">{{ iniciales(item) }}</span>
+                <div><strong>{{ item.apellidos }}, {{ item.nombres }}</strong><small>Odontólogo #{{ item.id }}</small></div>
+              </div>
+            </td>
+            <td><span class="pill neutral">{{ item.cop }}</span></td>
+            <td><span class="pill">{{ item.especialidad }}</span></td>
+            <td class="actions-cell">
+              <button class="icon-button" type="button" title="Editar" [attr.aria-label]="'Editar a ' + item.nombres" (click)="editar(item)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </button>
+              <button class="icon-button danger" type="button" title="Eliminar" [attr.aria-label]="'Eliminar a ' + item.nombres" (click)="pedirEliminacion(item)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          @if (!loading()) {
+            <tr><td colspan="4" class="empty-cell">
+              {{ busqueda() ? 'Ningún odontólogo coincide con "' + busqueda() + '".' : 'No hay odontólogos registrados.' }}
+            </td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+@if (porEliminar(); as item) {
+  <div class="modal-backdrop" (click)="cerrarConfirmacion()">
+    <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="eliminar-titulo" (click)="$event.stopPropagation()">
+      <span class="modal-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </span>
+      <h2 id="eliminar-titulo">¿Eliminar odontólogo?</h2>
+      <p>Se eliminará a <strong>{{ item.nombres }} {{ item.apellidos }}</strong> (COP {{ item.cop }}). Si tiene atenciones registradas, el sistema no permitirá eliminarlo.</p>
+      <div class="modal-actions">
+        <button class="button-secondary" type="button" (click)="cerrarConfirmacion()" [disabled]="eliminando()">Cancelar</button>
+        <button class="button-danger confirm-danger" type="button" (click)="confirmarEliminacion()" [disabled]="eliminando()">
+          @if (eliminando()) { <span class="spinner" aria-hidden="true"></span> Eliminando... } @else { Sí, eliminar }
+        </button>
+      </div>
+    </div>
+  </div>
+}
